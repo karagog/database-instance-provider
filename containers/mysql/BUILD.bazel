@@ -16,9 +16,6 @@ container_image(
         "desc": "Database Instance Provider Service",
         "version": "0.0",
     },
-    ports = [
-        "58615/tcp",
-    ],
     stamp = True,  # Make sure the build time is stamped.
     tars = [":app"],
 )
