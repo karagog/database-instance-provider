@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "lease",
+    srcs = ["lease.go"],
+    importpath = "github.com/karagog/db-provider/server/lease",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//server/proto",
+        "@com_github_golang_glog//:glog",
+        "@org_golang_google_grpc//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "lease_test",
+    srcs = ["lease_test.go"],
+    embed = [":lease"],
+    deps = [
+        "//server/lessor",
+        "//server/lessor/databaseprovider/fake",
+        "//server/service",
+        "//server/service/runner",
+        "@com_github_karagog_clock_go//simulated",
+    ],
+)

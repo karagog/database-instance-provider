@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "provider",
+    srcs = ["provider.go"],
+    importpath = "github.com/karagog/db-provider/containers/mysql/provider",
+    visibility = ["//visibility:public"],
+    deps = ["//server/proto"],
+)
+
+go_test(
+    name = "provider_test",
+    srcs = ["provider_test.go"],
+    embed = [":provider"],
+    deps = [
+        "//server/proto",
+        "@com_github_go_test_deep//:deep",
+    ],
+)

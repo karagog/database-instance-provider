@@ -1,0 +1,64 @@
+// This file defines the integration test service protocol.
+syntax = "proto3";
+
+package server;
+
+option go_package = "github.com/karagog/db-provider/server/proto";
+
+// IntegrationTest
+service IntegrationTest {
+  // GetDatabaseInstance requests a dedicated test instance.
+  //
+  // Communication is bi-directional and the caller is expected to
+  // keep the RPC open as long as they're using the test instance.
+  // As soon as the call finishes, the instance will be given to another
+  // requestor.
+  //
+  // See protobuf messages for protocol details.
+  rpc GetDatabaseInstance(stream GetDatabaseInstanceRequest)
+    returns (stream GetDatabaseInstanceResponse) {}
+}
+
+
+// GetDatabaseInstanceRequest is the first message in the stream that initiates
+// the lease request.
+// After the first message, no other message is expected.
+//
+// As soon as the connection is closed (or broken), the channel is closed and
+// the database instance is immediately given to another requestor.
+message GetDatabaseInstanceRequest {}
+
+// GetDatabaseInstanceResponse is a single message of a response stream that
+// consists of informational `status` messages (for logging purposes only)
+// until the instance is available. Once it's ready, the connection strings will
+// be populated so a test can connect to it.
+//
+// After the connection strings are reported, the server may send keepalive
+// messages which are empty, just to ensure the connection stays unbroken.
+message GetDatabaseInstanceResponse {
+  // For information only, so the client knows what's happening on the server.
+  string status = 1;
+
+  // This will be populated after the instance is ready.
+  ConnectionInfo connection_info = 2;
+}
+
+// ConnectionInfo tells us how to connect to a database instance.
+message ConnectionInfo {
+  // This connection will be established with all privileges.
+  ConnectionDetails root_conn = 1;
+
+  // This connection will be established with application-level privileges,
+  // so it can only do CRUD operations but not table operations.
+  ConnectionDetails app_conn = 2;
+}
+
+// ConnectionDetails contains everything you need to connect to a MySQL
+// database.
+message ConnectionDetails {
+  string user = 1;
+  string password = 2;
+  string address = 3;
+  int32 port = 4;
+  string database = 5;
+}

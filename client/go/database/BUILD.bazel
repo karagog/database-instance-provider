@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "database",
+    srcs = ["database.go"],
+    importpath = "github.com/karagog/db-provider/client/go/database",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//server/lease",
+        "//server/proto",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_test(
+    name = "database_test",
+    srcs = ["database_test.go"],
+    embed = [":database"],
+    deps = [
+        "//server/lessor",
+        "//server/lessor/databaseprovider/fake",
+        "//server/proto",
+        "//server/service",
+        "//server/service/runner",
+        "@com_github_go_test_deep//:deep",
+        "@com_github_karagog_clock_go//simulated",
+    ],
+)
