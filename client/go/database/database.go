@@ -31,8 +31,7 @@ type Instance struct {
 	// How to connect, or you can use the Connect/ConnectRoot() convenience methods.
 	Info *pb.ConnectionInfo
 
-	lease      *lease.Lease
-	lesseeDone chan bool // signals the end of the lessee goroutine
+	lease *lease.Lease
 }
 
 // Gets a new instance with the parameters sourced from flags.
@@ -47,35 +46,28 @@ func NewFromFlags(ctx context.Context) *Instance {
 // See also NewFromFlags().
 func New(ctx context.Context, databaseAddress string) *Instance {
 	// Connect to the test instance service to get a fresh mysql database.
-	l, err := lease.Acquire(ctx, databaseAddress)
+	l, err := lease.New(ctx, databaseAddress)
 	if err != nil {
 		panic(err)
 	}
-	i := &Instance{
-		lease:      l,
-		lesseeDone: make(chan bool),
-	}
-	go func() {
-		defer close(i.lesseeDone)
-		i.lease.Maintain()
-	}()
+	go l.Run()
 
 	// Block here indefinitely until an instance is ready. The client's Run() method
 	// maintains the lease on the instance until our Close() method is called.
-	if i.Info, err = i.lease.Wait(ctx); err != nil {
-		panic(err)
+	i := l.ConnectionInfo()
+	glog.V(1).Infof("Lease acquired on %q", i.RootConn.Database)
+	return &Instance{
+		lease: l,
+		Info:  i,
 	}
-	glog.V(1).Infof("Lease acquired on %q", i.Info.RootConn.Database)
-	return i
 }
 
 // Close releases the lock on the database instance when you're done using it.
 func (i *Instance) Close() {
-	if i.lease == nil {
+	if i.Info == nil {
 		return
 	}
 	glog.V(1).Infof("Returning lease on %q", i.Info.RootConn.Database)
-	i.lease.Release()
-	i.lease = nil
-	<-i.lesseeDone // join our goroutine to avoid leaking
+	i.lease.Close()
+	i.Info = nil
 }

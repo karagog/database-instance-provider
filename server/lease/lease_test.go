@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/karagog/clock-go/simulated"
 	"github.com/karagog/db-provider/server/lessor"
 	"github.com/karagog/db-provider/server/lessor/databaseprovider/fake"
@@ -13,6 +14,7 @@ import (
 	"github.com/karagog/db-provider/server/service/runner"
 )
 
+// Starts up a fake database provider service in-memory.
 func fakeServiceRunner(numInstances int, t *testing.T) *runner.Runner {
 	lor := lessor.New(&fake.DatabaseProvider{}, numInstances)
 	go lor.Run(context.Background())
@@ -27,97 +29,42 @@ func fakeServiceRunner(numInstances int, t *testing.T) *runner.Runner {
 	return r
 }
 
-func TestLessee(t *testing.T) {
+func TestLease(t *testing.T) {
 	r := fakeServiceRunner(1, t)
 	go r.Run()
 	defer r.Stop()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	l, err := Acquire(ctx, r.Address())
+	l, err := New(context.Background(), r.Address())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Release()
+	defer l.Close()
 
-	// Make sure the Run() method finishes.
+	// Call Run() and make sure it finishes.
 	done := make(chan bool)
 	go func() {
 		defer close(done)
-		l.Maintain()
+		l.Run()
 	}()
 
-	info, err := l.Wait(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Get the connection info, which blocks until we get a lease.
+	info := l.ConnectionInfo()
 	if info == nil {
 		t.Fatalf("Got nil connection info, want non-nil")
 	}
-	l.Release()
-	<-done
-}
 
-func TestWaitContextCanceled(t *testing.T) {
-	r := fakeServiceRunner(0, t) // no leases available
-	go r.Run()
-	defer r.Stop()
-
-	l, err := Acquire(context.Background(), r.Address())
-	if err != nil {
-		t.Fatal(err)
+	// Check that the result was cached by calling it again.
+	info2 := l.ConnectionInfo()
+	if diff := deep.Equal(info2, info); diff != nil {
+		t.Fatal(diff)
 	}
-	done := make(chan bool)
-	defer func() {
-		l.Release()
-		<-done // must ensure client is done before stopping the server
-	}()
-	go func() {
-		defer close(done)
-		l.Maintain()
-	}()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Wait in the background because it will block until we cancel the context.
-	errCh := make(chan error)
-	go func() {
-		_, err := l.Wait(ctx)
-		errCh <- err
-	}()
-	cancel()
-	err = <-errCh
-	if want := context.Canceled; err != want {
-		t.Fatalf("Wrong error (%v), want %v", err, want)
-	}
-}
-
-func TestDoubleWaitError(t *testing.T) {
-	r := fakeServiceRunner(1, t)
-	go r.Run()
-	defer r.Stop()
-
-	l, err := Acquire(context.Background(), r.Address())
-	if err != nil {
-		t.Fatal(err)
-	}
-	done := make(chan bool)
-	defer func() {
-		l.Release()
-		<-done // must ensure client is done before stopping the server
-	}()
-	go func() {
-		defer close(done)
-		l.Maintain()
-	}()
-
-	if _, err := l.Wait(context.TODO()); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := l.Wait(context.TODO()); err == nil {
-		t.Fatal("Got nil error, want error")
+	// Close down the lease and ensure that Run() finished.
+	l.Close()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("Run() never completed")
 	}
 }
 
@@ -126,13 +73,13 @@ func TestServerDisconnectsWhileHoldingLease(t *testing.T) {
 	r := fakeServiceRunner(1, t)
 	go r.Run()
 	defer r.Stop()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	l, err := Acquire(ctx, r.Address())
+	l, err := New(ctx, r.Address())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Release()
 
 	// Convert the fatal method to a panic to allow us to recover and avoid actually
 	// crashing the test.
@@ -140,15 +87,15 @@ func TestServerDisconnectsWhileHoldingLease(t *testing.T) {
 		panic(fmt.Sprintf(msg, args))
 	}
 
-	panicCh := make(chan bool) // did Maintain() panic?
+	panicCh := make(chan bool) // did the goroutine panic?
 	go func() {
 		defer func() { panicCh <- recover() != nil }()
-		l.Maintain()
+		l.Run()
 	}()
 
 	// Grab and hold a lease.
-	if _, err := l.Wait(ctx); err != nil {
-		t.Fatal(err)
+	if l.ConnectionInfo() == nil {
+		t.Fatal("Got nil connection info, want info")
 	}
 
 	// Stop the server, which should disconnect us with an error.
@@ -159,7 +106,7 @@ func TestServerDisconnectsWhileHoldingLease(t *testing.T) {
 }
 
 func TestLesseeDialedWrongAddress(t *testing.T) {
-	if _, err := Acquire(context.Background(), "localhost:1"); err == nil {
+	if _, err := New(context.Background(), "localhost:1"); err == nil {
 		t.Fatalf("Got nil error, want error")
 	}
 }

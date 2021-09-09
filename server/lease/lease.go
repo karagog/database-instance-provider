@@ -3,7 +3,6 @@ package lease
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/golang/glog"
@@ -18,21 +17,21 @@ var fatalf = func(msg string, args ...interface{}) { glog.Fatalf(msg, args...) }
 
 // Lease holds and maintains a lease on an instance maintained by the test server.
 //
-// Create with Acquire(), and then call `go Maintain()` to maintain the lease. It may take a
+// Create with Acquire(), and then call `go Run()` to maintain the lease. It may take a
 // while for a lease to be granted, so call Wait() to block until it is.
 //
 // When you're done with the lease, call Close() to relinquish it.
 type Lease struct {
-	stream pb.IntegrationTest_GetDatabaseInstanceClient
-
-	ch     chan *pb.ConnectionInfo
-	waited bool // already waited?
+	stream   pb.IntegrationTest_GetDatabaseInstanceClient
+	ch       chan *pb.ConnectionInfo
+	connInfo *pb.ConnectionInfo
 }
 
-// Requests a new lease from the server. You must also call `go Run()` afterwards.
-// Good citizens return the lease explicitly with ReturnLease(), although it will
-// be returned automatically when the connection is broken for any reason.
-func Acquire(ctx context.Context, serviceAddr string) (*Lease, error) {
+// Requests a new lease from the server. You must call 'go Run()' before using.
+// Good citizens return the lease explicitly by calling Close(),
+// although it will be returned automatically when the connection is
+// broken for any reason.
+func New(ctx context.Context, serviceAddr string) (*Lease, error) {
 	conn, err := grpc.Dial(serviceAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
@@ -50,47 +49,49 @@ func Acquire(ctx context.Context, serviceAddr string) (*Lease, error) {
 	}, nil
 }
 
-// Gives the lease back to the server. You must not use the connection info anymore.
-func (l *Lease) Release() {
-	l.stream.CloseSend()
-}
-
-// Maintain runs the main workflow that maintains the lease with the server.
+// Run runs the main workflow that maintains the lease with the server.
+// It returns then the lease context is finished, or if it loses
+// connection to the database provider service.
 //
-// This should be run in the background via `go Maintain()`. It ends when you return the lease.
-func (l *Lease) Maintain() {
+// This ends when you return the lease, or there's an error from the server.
+func (l *Lease) Run() {
+	defer close(l.ch)
 	for {
 		resp, err := l.stream.Recv()
-		if err == io.EOF {
-			return
-		}
 		if err != nil {
+			if err == io.EOF {
+				return
+			}
 			// A sudden loss of the lease is a fatal error that should abort
-			// the test program immediately to avoid data corruption.
-			fatalf("Halting program due to TestServer error: %v", err)
+			// the test program immediately to avoid conflicting with another test.
+			fatalf("Halting program due loss of lease on the test database: %v", err)
 		}
 		if resp.Status != "" {
-			glog.V(2).Infof("Received server status: %s", resp.Status)
+			glog.V(1).Infof("Received server status: %s", resp.Status)
 		}
 		if resp.ConnectionInfo == nil {
 			continue // server is still processing our request...
 		}
-		glog.V(2).Infof("Got connection info from the server:\n%v", resp)
+		glog.V(1).Infof("Got connection info from the server:\n%v", resp)
 		l.ch <- resp.ConnectionInfo
 	}
 }
 
-// Wait blocks indefinitely until the lease is acquired. This should only be called
-// from the main test thread. Calling this multiple times is an error.
-func (l *Lease) Wait(ctx context.Context) (*pb.ConnectionInfo, error) {
-	if l.waited {
-		return nil, fmt.Errorf("Wait() called multiple times")
+// Close closes the object and releases the lease. This must be called
+// when you're done with it.
+func (l *Lease) Close() {
+	l.connInfo = nil
+	l.stream.CloseSend()
+	<-l.ch // join the goroutine method
+}
+
+// ConnectionInfo returns the connection info to the database on
+// which it holds a lease. It blocks indefinitely until the lease is acquired
+// and the connection info is available. The result is cached, so
+// subsequent calls return immediately.
+func (l *Lease) ConnectionInfo() *pb.ConnectionInfo {
+	if l.connInfo == nil {
+		l.connInfo = <-l.ch
 	}
-	l.waited = true
-	select {
-	case info := <-l.ch:
-		return info, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
+	return l.connInfo
 }

@@ -21,6 +21,7 @@ go_test(
         "//server/lessor/databaseprovider/fake",
         "//server/service",
         "//server/service/runner",
+        "@com_github_go_test_deep//:deep",
         "@com_github_karagog_clock_go//simulated",
     ],
 )
