@@ -8,7 +8,7 @@ go_library(
     deps = [
         "//server/proto",
         "//server/service",
-        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//:grpc",
     ],
 )
 
@@ -22,6 +22,6 @@ go_test(
         "//server/proto",
         "//server/service",
         "@com_github_karagog_clock_go//simulated",
-        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//:grpc",
     ],
 )

@@ -1,19 +1,37 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_library(
-    name = "provider",
-    srcs = ["provider.go"],
+    name = "provider_lib",
+    srcs = [
+        "main.go",
+        "provider.go",
+    ],
     importpath = "github.com/karagog/db-provider/containers/mysql/provider",
-    visibility = ["//visibility:public"],
-    deps = ["//server/proto"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "//client/go/database/mysql",
+        "//server/lessor",
+        "//server/proto",
+        "//server/service",
+        "//server/service/runner",
+        "@com_github_golang_glog//:glog",
+        "@com_github_karagog_clock_go//simulated",
+    ],
 )
 
 go_test(
     name = "provider_test",
     srcs = ["provider_test.go"],
-    embed = [":provider"],
+    embed = [":provider_lib"],
     deps = [
         "//server/proto",
         "@com_github_go_test_deep//:deep",
     ],
+)
+
+go_image(
+    name = "provider",
+    embed = [":provider_lib"],
+    visibility = ["//visibility:public"],
 )

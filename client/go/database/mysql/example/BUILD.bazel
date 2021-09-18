@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "example_test",
+    srcs = ["example_test.go"],
+    # This is an integration test that requires the DB provider service
+    # to be running. Only run with manual invocations.
+    tags = ["manual"],
+    deps = [
+        "//client/go/database",
+        "//client/go/database/mysql",
+    ],
+)

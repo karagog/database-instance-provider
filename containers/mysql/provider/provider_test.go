@@ -1,4 +1,4 @@
-package provider
+package main
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 )
 
 func TestConnectionInfo(t *testing.T) {
-	m := Mysql{
+	m := MysqlProvider{
 		Conn: MysqlConnParams{
 			User:         "George",
 			UserPassword: "1234",

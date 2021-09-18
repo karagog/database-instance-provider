@@ -1,5 +1,4 @@
-// Package provider implements the mysql provider.
-package provider
+package main
 
 import (
 	"context"
@@ -9,7 +8,7 @@ import (
 	pb "github.com/karagog/db-provider/server/proto"
 )
 
-// MysqlConnParams tells us how to connect to a Mysql server.
+// MysqlConnParams tells us how to connect to a MysqlProvider server.
 type MysqlConnParams struct {
 	// The user names/passwords for connecting to the MySQL server.
 	User         string
@@ -23,8 +22,8 @@ type MysqlConnParams struct {
 	MysqlPort int
 }
 
-// Mysql implements DatabaseProvider for Mysql databases.
-type Mysql struct {
+// MysqlProvider implements DatabaseProvider for MysqlProvider databases.
+type MysqlProvider struct {
 	// Conn tells us how to connect, so we can provide connection info for
 	// a database.
 	Conn MysqlConnParams
@@ -33,7 +32,7 @@ type Mysql struct {
 	DB *sql.DB
 }
 
-func (m *Mysql) GetConnectionInfo(database string) *pb.ConnectionInfo {
+func (m *MysqlProvider) GetConnectionInfo(database string) *pb.ConnectionInfo {
 	return &pb.ConnectionInfo{
 		RootConn: &pb.ConnectionDetails{
 			User:     "root",
@@ -52,12 +51,12 @@ func (m *Mysql) GetConnectionInfo(database string) *pb.ConnectionInfo {
 	}
 }
 
-func (m *Mysql) CreateDatabase(ctx context.Context, name string) error {
+func (m *MysqlProvider) CreateDatabase(ctx context.Context, name string) error {
 	_, err := m.DB.ExecContext(ctx, fmt.Sprintf("CREATE DATABASE %s", name))
 	return err
 }
 
-func (m *Mysql) DropDatabase(ctx context.Context, name string) error {
+func (m *MysqlProvider) DropDatabase(ctx context.Context, name string) error {
 	_, err := m.DB.ExecContext(ctx, fmt.Sprintf("DROP DATABASE IF EXISTS %s", name))
 	return err
 }

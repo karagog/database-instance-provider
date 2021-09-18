@@ -1,21 +1,33 @@
-# Note that environment variables may be sourced from the shell environment in
-# which docker-compose was invoked, or from the defaults specified in '.env'.
-version: "3.3"
+version: "3.9"
 services:
-  server:
-    # Simply update this to remove the address to fetch it from DockerHub instead
-    # of the local registry.
-    image: "localhost:5000/karagog/mysql-db-provider:latest"
-    ports:
-      - "$APP_PROVIDER_PORT:$APP_PROVIDER_PORT"
-      - "$APP_MYSQL_PUBLISHED_PORT:3306"
+  # We need to run a dedicated Mysql server instance to provide the databases.
+  mysqld:
+    image: "mysql/mysql-server:8.0"
 
-    environment:
-      # Forward some environment variables to keep them consistent with the ports
-      # we're forwarding.
-      - "APP_PROVIDER_PORT=$APP_PROVIDER_PORT"
-      - "APP_MYSQL_PUBLISHED_PORT=$APP_MYSQL_PUBLISHED_PORT"
+    # Keep the service running even after machine reboots.
+    restart: "always"
+
+    ports:
+      - "$PROVIDER_MYSQL_PORT:3306"
 
     # Using tmpfs speeds up the server startup and operation significantly. This
     # is a test database instance server, so the data is not meant to persist.
     tmpfs: "/var/lib/mysql"
+
+    env_file:
+      - ".env"
+
+  # Run the provider service alongside Mysql.
+  provider:
+    # Simply update the DOCKER_REGISTRY_ADDRESS in the .env file (or in your local
+    # bash environment) to fetch it from a different registry.
+    # See README.md for details.
+    image: "${DOCKER_REGISTRY_ADDRESS:-index.docker.io}/karagog/mysql-db-provider:latest"
+
+    # Keep the service running even after machine reboots.
+    restart: "always"
+    ports:
+      - "$PROVIDER_PORT:$PROVIDER_PORT"
+
+    env_file:
+      - ".env"

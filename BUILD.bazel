@@ -7,7 +7,7 @@ load("@bazel_gazelle//:def.bzl", "gazelle")
 # checked into the codebase and are consistent between
 # Bazel and Go build chains. (Re-)Generate protos using "go generate".
 #
-# gazelle:proto disable
+# gazelle:proto disable_global
 
 gazelle(name = "gazelle")
 

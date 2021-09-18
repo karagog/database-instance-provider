@@ -23,6 +23,6 @@ go_test(
         "//server/proto",
         "@com_github_golang_glog//:glog",
         "@com_github_karagog_clock_go//simulated",
-        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//:grpc",
     ],
 )

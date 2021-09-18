@@ -2,6 +2,7 @@
 package runner
 
 import (
+	"fmt"
 	"net"
 
 	pb "github.com/karagog/db-provider/server/proto"
@@ -43,7 +44,7 @@ func (r *Runner) Run() {
 	defer close(r.done)
 	if err := r.grpcServer.Serve(r.listener); err != nil {
 		// The Serve() method should never return except when we shut ourselves down.
-		panic(err)
+		panic(fmt.Errorf("grpc server finished unexpectedly: %v", err))
 	}
 }
 

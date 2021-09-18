@@ -1,28 +1,8 @@
-load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
-
-# This package rule puts the container app in a dedicated location (instead of /).
-pkg_tar(
-    name = "app",
-    srcs = ["//containers/mysql/container"],
-    package_dir = "usr/local/bin",
-)
-
-container_image(
-    name = "mysql",
-    base = "@mysql_server//image",
-    cmd = "/usr/local/bin/container",
-    labels = {
-        "desc": "Database Instance Provider Service",
-        "version": "0.0",
-    },
-    stamp = True,  # Make sure the build time is stamped.
-    tars = [":app"],
-)
+load("@io_bazel_rules_docker//docker:docker.bzl", "docker_push")
 
 # This rule pushes to a local registry server for testing.
 #
-# You can start a local registry server with this command:
+# You can start a persistent local registry server with this command:
 #  $ docker run -d -p 5000:5000 --restart=always --name registry registry:2
 #
 # The testing cycle looks something like this:
@@ -30,18 +10,23 @@ container_image(
 # Build/Push a new image to the local registry via:
 #  $ bazel run //containers/mysql:push_local
 #
-# Pull the image from the local registry:
+# Pull images from their respective registries:
 #  $ docker-compose pull
 #
 # Start the image:
 #  $ docker-compose up
-container_push(
+#
+# After a few seconds the service will start and can be used by tests.
+docker_push(
     name = "push_local",
-    format = "Docker",
-    image = ":mysql",
+    image = "//containers/mysql/provider",
     registry = "localhost:5000",
     repository = "karagog/mysql-db-provider",
     tag = "latest",
+
+    # You can also push with a user-specific tag to prevent users'
+    # imagers from clobbering each other.
+    #tag = "{BUILD_USER}",
 )
 
 # This rule pushes to DockerHub. You must have a valid access token in order
@@ -49,10 +34,9 @@ container_push(
 #
 # To get an access token, you first need access to the repository, and then
 # you need to log in to hub.docker.com and go to security settings.
-container_push(
+docker_push(
     name = "push",
-    format = "Docker",
-    image = ":mysql",
+    image = "//containers/mysql/provider",
     registry = "index.docker.io",
     repository = "karagog/mysql-db-provider",
     tag = "latest",

@@ -81,30 +81,15 @@ load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
 
 container_deps()
 
-load(
-    "@io_bazel_rules_docker//container:container.bzl",
-    "container_pull",
-)
+load("@io_bazel_rules_docker//go:image.bzl", _go_image_repos = "repositories")
 
-container_pull(
-    name = "mysql_server",
-    registry = "index.docker.io",
-    repository = "mysql/mysql-server",
-    tag = "8.0",
-)
+_go_image_repos()
 
 go_repository(
     name = "co_honnef_go_tools",
     importpath = "honnef.co/go/tools",
     sum = "h1:/hemPrYIhOhy8zYrNj+069zDB68us2sMGsfkFJO0iZs=",
     version = "v0.0.0-20190523083050-ea95bdfd59fc",
-)
-
-go_repository(
-    name = "com_github_antihax_optional",
-    importpath = "github.com/antihax/optional",
-    sum = "h1:xK2lYat7ZLaVVcIuj82J8kIro4V6kDe0AUDFboUCwcg=",
-    version = "v1.0.0",
 )
 
 go_repository(
@@ -140,13 +125,6 @@ go_repository(
     importpath = "github.com/cncf/udpa/go",
     sum = "h1:cqQfy1jclcSy/FwLjemeg3SR1yaINm74aQyupQ0Bl8M=",
     version = "v0.0.0-20201120205902-5459f2c99403",
-)
-
-go_repository(
-    name = "com_github_cncf_xds_go",
-    importpath = "github.com/cncf/xds/go",
-    sum = "h1:OZmjad4L3H8ncOIR8rnb5MREYqG8ixi5+WbeUsquF0c=",
-    version = "v0.0.0-20210312221358-fbca930ec8ed",
 )
 
 go_repository(
@@ -196,13 +174,6 @@ go_repository(
     importpath = "github.com/fastly/go-utils",
     sum = "h1:Ghm4eQYC0nEPnSJdVkTrXpu9KtoVCSo1hg7mtI7G9KU=",
     version = "v0.0.0-20180712184237-d95a45783239",
-)
-
-go_repository(
-    name = "com_github_ghodss_yaml",
-    importpath = "github.com/ghodss/yaml",
-    sum = "h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=",
-    version = "v1.0.0",
 )
 
 go_repository(
@@ -262,13 +233,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_grpc_ecosystem_grpc_gateway",
-    importpath = "github.com/grpc-ecosystem/grpc-gateway",
-    sum = "h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=",
-    version = "v1.16.0",
-)
-
-go_repository(
     name = "com_github_hashicorp_golang_lru",
     importpath = "github.com/hashicorp/golang-lru",
     sum = "h1:YPkqC67at8FYaadspW/6uE0COsBxS2656RLEr8Bppgk=",
@@ -287,13 +251,6 @@ go_repository(
     importpath = "github.com/karagog/clock-go",
     sum = "h1:kMYSVIOBwpfNGpBpPKs9g+rD3o8bOw/mn71pIspjCAQ=",
     version = "v1.0.0",
-)
-
-go_repository(
-    name = "com_github_karagog_shell_go",
-    importpath = "github.com/karagog/shell-go",
-    sum = "h1:LrMc9GIBfvqAXzxm0O6ijaM4VN11oh3TFh1U2KOAipU=",
-    version = "v0.0.0-20210908001151-8adbd030d61c",
 )
 
 go_repository(
@@ -385,13 +342,6 @@ go_repository(
     importpath = "github.com/prometheus/client_model",
     sum = "h1:gQz4mCbXsO+nc9n1hCxHcGA3Zx3Eo+UHZoInFGUIXNM=",
     version = "v0.0.0-20190812154241-14fe0d1b01d4",
-)
-
-go_repository(
-    name = "com_github_rogpeppe_fastuuid",
-    importpath = "github.com/rogpeppe/fastuuid",
-    sum = "h1:Ppwyp6VYCF1nvBTXL3trRso7mXMlRrw9ooo375wvi2s=",
-    version = "v1.2.0",
 )
 
 go_repository(
@@ -493,13 +443,6 @@ go_repository(
 )
 
 go_repository(
-    name = "io_opentelemetry_go_proto_otlp",
-    importpath = "go.opentelemetry.io/proto/otlp",
-    sum = "h1:rwOQPCuKAKmwGKq2aVNnYIibI6wnV7EvzgfTCzcdGg8=",
-    version = "v0.7.0",
-)
-
-go_repository(
     name = "org_golang_google_appengine",
     importpath = "google.golang.org/appengine",
     sum = "h1:FZR1q0exgwxzPzp/aF+VccGrSfxfPpkBqjIIEq3ru6c=",
@@ -596,10 +539,3 @@ go_repository(
     sum = "h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=",
     version = "v0.0.0-20191204190536-9bdfabe68543",
 )
-
-load(
-    "@io_bazel_rules_docker//go:image.bzl",
-    _go_image_repos = "repositories",
-)
-
-_go_image_repos()

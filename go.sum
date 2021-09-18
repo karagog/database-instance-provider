@@ -64,8 +64,6 @@ github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 h1:IPJ3dvxmJ4uc
 github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869/go.mod h1:cJ6Cj7dQo+O6GJNiMx+Pa94qKj+TG8ONdKHgMNIyyag=
 github.com/karagog/clock-go v1.0.0 h1:kMYSVIOBwpfNGpBpPKs9g+rD3o8bOw/mn71pIspjCAQ=
 github.com/karagog/clock-go v1.0.0/go.mod h1:9fKD2d7JVNOpeUo2d0ut5ZwTRIFC9dgpl704OhG7R7Q=
-github.com/karagog/shell-go v0.0.0-20210908001151-8adbd030d61c h1:LrMc9GIBfvqAXzxm0O6ijaM4VN11oh3TFh1U2KOAipU=
-github.com/karagog/shell-go v0.0.0-20210908001151-8adbd030d61c/go.mod h1:bd/pv4qbym+99GBIE7r3v+f3jgmPjTHirqRI8emP/lU=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2 h1:DB17ag19krx9CFsz4o3enTrPXyIXCl+2iCXH/aMAp9s=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
