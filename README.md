@@ -19,18 +19,35 @@ Since the service uses GRPC, it can support clients from just about any language
 
 You can find working examples under the language-specific client directories. These can be run to test that the provider service is working from your preferred client language once you have it up and running.
 
-## Running The Service
-This repo uses docker-compose to spin up the necessary containers in Docker to run the service. Simply "cd" into the relevant container directory (e.g. containers/mysql) and run:
+## Quickstart
+Follow these instructions to get up and running quickly and see how/if everything works in your environment. At a high level, there are two basic steps:
+
+1. Run the database provider service.
+1. Run the example integration tests.
+
+### Running The Service
+This repo uses docker-compose to spin up the necessary containers in Docker to run the service.
 
 ```bash
-# First fetch the images from their respective registries.
-containers/mysql$ docker-compose pull
+# Go to the relevant container directory:
+$ cd containers/mysql
 
-# Then start the containers using docker-compose:
+# Start the containers using docker-compose (this will automatically pull them from the registry):
 containers/mysql$ docker-compose up -d
 ```
 
-The latest built container is hosted at https://hub.docker.com/r/karagog/mysql-db-provider, but you can build/fetch your own locally-built version by following the directions below.
+The latest built container is hosted at https://hub.docker.com/r/karagog/mysql-db-provider, but you can build/fetch your own locally-built version by following the directions [below](#deploying-from-a-locally-built-version).
+
+### Running the Example Tests
+There are example integration tests available for you to study and use as a starting point for your own integration tests. You can run it with Bazel or Golang toolchains:
+
+```bash
+# Test using Bazel toolchain:
+$ bazel test //client/go/database/mysql/example:example_test
+
+# Test using Golang toolchain:
+$ go test github.com/karagog/db-provider/client/go/database/mysql/example/...
+```
 
 ## Deploying From A Locally-Built Version
 You can build the container yourself from source code and deploy that version by following these instructions. This is useful, for example, if you want to make changes to the container and test them quickly, or if you depend on a specific version of the service. For most use cases, however, you should be able to deploy the publicly provided version.
