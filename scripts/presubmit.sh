@@ -22,10 +22,11 @@ go mod tidy
 #  $ bazel run //:gazelle -- update-repos --from_file=go.mod --prune
 bazel run //:gazelle
 
-# Make sure go test passes.
-go test github.com/karagog/db-provider/... -count=1
-
-# Make sure Bazel test passes. The result should be the same as "go test",
-# unless the BUILD/WORKSPACE files are out of sync with the go packages.
-# See the notes above about running Gazelle to fix this.
-bazel test //... --nocache_test_results
+# Make sure Bazel test passes. We use Bazel to test instead of "go test"
+# because the BUILD files give us a richer configuration that specifies
+# which tests we actually want to run.
+#
+# NOTE: This does not run tests that are tagged "manual" (e.g. the integration
+# tests that require the provider service to be running). If you want to
+# run the manual tests, you must specify them explicitly on the command line.
+bazel test //... --build_manual_tests --nocache_test_results
