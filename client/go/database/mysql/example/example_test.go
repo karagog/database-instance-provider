@@ -52,8 +52,19 @@ func TestMysqlDatabase(t *testing.T) {
 	}
 }
 
+func TestUnprivilegedUserCannotCreateTable(t *testing.T) {
+	// Instantiate a new database and connect with the app user.
+	i := database.NewFromFlags(context.Background())
+	db := mysql.ConnectOrDie(i.Info.AppConn)
+
+	// Make sure the unprivileged user cannot create a table.
+	if _, err := db.Exec(`CREATE TABLE foo (id INT)`); err == nil {
+		t.Fatal("Got nil error, want error")
+	}
+}
+
 func TestPanicOnError(t *testing.T) {
-	// Set the address flag to an invalid value to see if we panic.
+	// Set the address flag to an invalid value to induce a panic.
 	flag.Set("db_instance_provider_address", "")
 
 	// This function detects whether the database instantiation panicked or not.
