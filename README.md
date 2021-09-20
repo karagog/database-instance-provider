@@ -65,7 +65,7 @@ $ bazel run //containers/mysql:push_local
 ```
 
 ### Pulling and Running
-After pushing you can pull the image and run it, simply by prefixing the deployment command above with the address of your registry service (usually localhost:5000), or by running docker-compose in the container's source code directory.
+After pushing to the local registry you can pull the image and run it, simply by updating an environment variable with the address of your registry service (usually localhost:5000):
 
 ```bash
 # Update the environment to fetch from the local registry:
