@@ -3,6 +3,9 @@
 //
 // Note: The instance provider service must already be running in order for
 // this test to work. See README for details.
+
+//go:build integration
+
 package example
 
 import (
