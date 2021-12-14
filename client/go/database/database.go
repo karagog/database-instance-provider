@@ -9,22 +9,12 @@ package database
 
 import (
 	"context"
-	"flag"
+	"os"
 
 	"github.com/golang/glog"
 
 	"github.com/karagog/db-provider/server/lease"
 	pb "github.com/karagog/db-provider/server/proto"
-)
-
-// We define flags for passing constructor params in order to facilitate using
-// these in unit tests, where we don't want to repeat all the params in every
-// test.
-var (
-	// The default value should be the same as defined in the container's .env file,
-	// so it only needs changing under special circumstances.
-	databaseProviderAddress = flag.String("db_instance_provider_address", "172.17.0.1:58615",
-		"The address where to find the database instance service.")
 )
 
 type Instance struct {
@@ -34,16 +24,20 @@ type Instance struct {
 	lease *lease.Lease
 }
 
-// Gets a new instance with the parameters sourced from flags.
+// Gets a new instance with the parameters sourced from environment variables.
 // This is the way most tests will get a database instance.
 //
 // You must Close() it when done to release your lock on the database.
-func NewFromFlags(ctx context.Context) *Instance {
-	return New(ctx, *databaseProviderAddress)
+func NewFromEnv(ctx context.Context) *Instance {
+	addr := "172.17.0.1:58615"
+	if v := os.Getenv("DB_INSTANCE_PROVIDER_ADDRESS"); v != "" {
+		addr = v
+	}
+	return New(ctx, addr)
 }
 
 // Gets a database instance from a provider service.
-// See also NewFromFlags().
+// See also NewFromEnv().
 func New(ctx context.Context, databaseAddress string) *Instance {
 	// Connect to the test instance service to get a fresh mysql database.
 	l, err := lease.New(ctx, databaseAddress)

@@ -7,7 +7,7 @@ package example
 
 import (
 	"context"
-	"flag"
+	"os"
 	"testing"
 
 	"github.com/karagog/db-provider/client/go/database"
@@ -16,7 +16,7 @@ import (
 
 func TestMysqlDatabase(t *testing.T) {
 	// Instantiate a fresh new database.
-	i := database.NewFromFlags(context.Background())
+	i := database.NewFromEnv(context.Background())
 
 	// Connect as the administrative user in order to create tables.
 	rootDB := mysql.ConnectOrDie(i.Info.RootConn)
@@ -54,7 +54,7 @@ func TestMysqlDatabase(t *testing.T) {
 
 func TestUnprivilegedUserCannotCreateTable(t *testing.T) {
 	// Instantiate a new database and connect with the app user.
-	i := database.NewFromFlags(context.Background())
+	i := database.NewFromEnv(context.Background())
 	db := mysql.ConnectOrDie(i.Info.AppConn)
 
 	// Make sure the unprivileged user cannot create a table.
@@ -64,8 +64,10 @@ func TestUnprivilegedUserCannotCreateTable(t *testing.T) {
 }
 
 func TestPanicOnError(t *testing.T) {
-	// Set the address flag to an invalid value to induce a panic.
-	flag.Set("db_instance_provider_address", "")
+	// Set the address to an invalid value to induce a panic.
+	if err := os.Setenv("DB_INSTANCE_PROVIDER_ADDRESS", "invalid"); err != nil {
+		t.Fatal(err)
+	}
 
 	// This function detects whether the database instantiation panicked or not.
 	func() {
@@ -74,6 +76,6 @@ func TestPanicOnError(t *testing.T) {
 				t.Fatal("Did not panic, want panic")
 			}
 		}()
-		database.NewFromFlags(context.Background())
+		database.NewFromEnv(context.Background())
 	}()
 }

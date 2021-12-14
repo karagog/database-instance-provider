@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"flag"
+	"os"
 	"testing"
 	"time"
 
@@ -42,11 +42,11 @@ func TestDatabase(t *testing.T) {
 	go r.Run()
 	defer r.Stop()
 
-	// Override the address flag so it uses our fake service.
-	flag.Set("db_instance_provider_address", r.Address())
+	// Override the address so it uses our fake service.
+	os.Setenv("DB_INSTANCE_PROVIDER_ADDRESS", r.Address())
 
 	// Get a database instance.
-	i := NewFromFlags(ctx)
+	i := NewFromEnv(ctx)
 
 	// Make sure we got the connection info given to us by the server.
 	if diff := deep.Equal(i.Info, &provider.Info); diff != nil {
