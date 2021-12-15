@@ -67,5 +67,5 @@ jobs:
     - name: Test
       env: 
           # This tells unit tests where to find the instance provider.
-          DB_INSTANCE_PROVIDER_ADDRESS: localhost:58615
+          DB_INSTANCE_PROVIDER_ADDRESS: provider:58615
       run: go test -v ./... -tags=integration
