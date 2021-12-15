@@ -32,7 +32,8 @@ go_test(
 
 go_image(
     name = "provider",
-    args = ["-v=2"],
+    # You can optionally add arguments e.g. for debugging.
+    # args = ["-v=2"],
     data = [
         "//healthcheck",
     ],
