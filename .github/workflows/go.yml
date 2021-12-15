@@ -22,29 +22,20 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: test
           MYSQL_ROOT_HOST: "%"
-        ports:
-          - 53983:3306
 
       provider:
         image: karagog/mysql-db-provider:dev
         env:
           MYSQL_ROOT_PASSWORD: test
           MYSQL_ROOT_HOST: "%"
+
+          # We can reference the service's hostname because it's running in a Docker container.
           PROVIDER_MYSQL_ADDRESS: database
-
-          # Point to the container port, since this is one container talking to another.
           PROVIDER_MYSQL_PORT: 3306
-
-          # This is the address that is used by database clients, since they cannot see the
-          # container port, only the host port.
-          # PROVIDER_MYSQL_PUBLIC_ADDRESS: "localhost:53983"
-
           PROVIDER_PORT: 58615
           PROVIDER_MYSQL_USER: test
           PROVIDER_MYSQL_USER_PASSWORD: test
           PROVIDER_DB_INSTANCES: 20
-        ports:
-          - 58615:58615
 
     steps:
     - uses: actions/checkout@v2
@@ -66,6 +57,11 @@ jobs:
 
     - name: Test
       env: 
-          # This tells unit tests where to find the instance provider.
+          # This tells unit tests where to find the instance provider. The hostname lookup works
+          # only because the tests are running in a Docker environment with the
+          # service containers present.
           DB_INSTANCE_PROVIDER_ADDRESS: provider:58615
+
+      # Run all unit tests plus integration tests. We can safely run integration tests because
+      # we set up the necessary service containers.
       run: go test -v ./... -tags=integration
