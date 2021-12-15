@@ -52,7 +52,7 @@ func main() {
 	if err != nil {
 		glog.Fatal(err)
 	}
-	glog.Info("Database container initialized")
+	glog.Info("Database initialized, ready to serve requests...")
 
 	// Now that the database is initialized, update the service which tells
 	// clients that it's okay to request databases.
