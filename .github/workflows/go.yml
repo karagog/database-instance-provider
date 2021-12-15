@@ -27,6 +27,8 @@ jobs:
           MYSQL_ROOT_PASSWORD: test
           MYSQL_ROOT_HOST: "%"
           PROVIDER_MYSQL_ADDRESS: database
+
+          # Point to the container port, since this is one container talking to another.
           PROVIDER_MYSQL_PORT: 3306
           PROVIDER_PORT: 58615
           PROVIDER_MYSQL_USER: test
@@ -43,17 +45,12 @@ jobs:
       with:
         go-version: 1.17
 
-    # TODO: Add a health check to the container once
-    # https://github.com/bazelbuild/rules_docker/pull/1742 or something like it
-    # is merged, so we don't have to sleep-wait.
-    # - name: Wait for service to start up
-    #   run: sleep 30
-
-    - name: Show logs
-      run: |
-        echo "${{ toJson(job) }}"
-        docker logs "${{ job.services.provider.id }}"
-        docker logs "${{ job.services.database.id }}"
+    # Keep this around (but commented) because it can be useful to debug if the service is failing.
+    # - name: Show logs
+    #   run: |
+    #     echo "${{ toJson(job) }}"
+    #     docker logs "${{ job.services.provider.id }}"
+    #     docker logs "${{ job.services.database.id }}"
 
     - name: Build
       run: go build -v ./...
@@ -62,4 +59,4 @@ jobs:
       env: 
           # This tells unit tests where to find the instance provider.
           DB_INSTANCE_PROVIDER_ADDRESS: localhost:58615
-      run: go test -v ./...
+      run: go test -v ./... -tags=integration
