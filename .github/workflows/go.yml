@@ -10,6 +10,10 @@ jobs:
   test-job:
     runs-on: ubuntu-latest
 
+    # Run the tests inside the container so they have direct access to the service containers.
+    container:
+      image:  node:10.16-jessie
+
     services:
       # The database provider is needed to spawn database instances for
       # unit integration tests.
@@ -30,6 +34,11 @@ jobs:
 
           # Point to the container port, since this is one container talking to another.
           PROVIDER_MYSQL_PORT: 3306
+
+          # This is the address that is used by database clients, since they cannot see the
+          # container port, only the host port.
+          # PROVIDER_MYSQL_PUBLIC_ADDRESS: "localhost:53983"
+
           PROVIDER_PORT: 58615
           PROVIDER_MYSQL_USER: test
           PROVIDER_MYSQL_USER_PASSWORD: test
