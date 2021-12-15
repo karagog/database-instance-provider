@@ -7,6 +7,8 @@ option go_package = "github.com/karagog/db-provider/server/proto";
 
 // IntegrationTest
 service IntegrationTest {
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse) {}
+
   // GetDatabaseInstance requests a dedicated test instance.
   //
   // Communication is bi-directional and the caller is expected to
@@ -19,6 +21,21 @@ service IntegrationTest {
     returns (stream GetDatabaseInstanceResponse) {}
 }
 
+// GetStatusRequest gets the current status.
+message GetStatusRequest {}
+
+// GetStatusResponse reports the current status.
+message GetStatusResponse {
+  enum State {
+    UNKNOWN_STATE = 0;
+    STARTING = 1;
+    UP = 2;
+  }
+
+  // State tells us the current state of the service, for example so the test environment
+  // can block until the service has started.
+  State state = 1;
+}
 
 // GetDatabaseInstanceRequest is the first message in the stream that initiates
 // the lease request.

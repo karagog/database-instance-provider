@@ -18,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type IntegrationTestClient interface {
+	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error)
 	// GetDatabaseInstance requests a dedicated test instance.
 	//
 	// Communication is bi-directional and the caller is expected to
@@ -35,6 +36,15 @@ type integrationTestClient struct {
 
 func NewIntegrationTestClient(cc grpc.ClientConnInterface) IntegrationTestClient {
 	return &integrationTestClient{cc}
+}
+
+func (c *integrationTestClient) GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error) {
+	out := new(GetStatusResponse)
+	err := c.cc.Invoke(ctx, "/server.IntegrationTest/GetStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *integrationTestClient) GetDatabaseInstance(ctx context.Context, opts ...grpc.CallOption) (IntegrationTest_GetDatabaseInstanceClient, error) {
@@ -72,6 +82,7 @@ func (x *integrationTestGetDatabaseInstanceClient) Recv() (*GetDatabaseInstanceR
 // All implementations must embed UnimplementedIntegrationTestServer
 // for forward compatibility
 type IntegrationTestServer interface {
+	GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error)
 	// GetDatabaseInstance requests a dedicated test instance.
 	//
 	// Communication is bi-directional and the caller is expected to
@@ -88,6 +99,9 @@ type IntegrationTestServer interface {
 type UnimplementedIntegrationTestServer struct {
 }
 
+func (UnimplementedIntegrationTestServer) GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
+}
 func (UnimplementedIntegrationTestServer) GetDatabaseInstance(IntegrationTest_GetDatabaseInstanceServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetDatabaseInstance not implemented")
 }
@@ -102,6 +116,24 @@ type UnsafeIntegrationTestServer interface {
 
 func RegisterIntegrationTestServer(s grpc.ServiceRegistrar, srv IntegrationTestServer) {
 	s.RegisterService(&IntegrationTest_ServiceDesc, srv)
+}
+
+func _IntegrationTest_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IntegrationTestServer).GetStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/server.IntegrationTest/GetStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IntegrationTestServer).GetStatus(ctx, req.(*GetStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _IntegrationTest_GetDatabaseInstance_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -136,7 +168,12 @@ func (x *integrationTestGetDatabaseInstanceServer) Recv() (*GetDatabaseInstanceR
 var IntegrationTest_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "server.IntegrationTest",
 	HandlerType: (*IntegrationTestServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetStatus",
+			Handler:    _IntegrationTest_GetStatus_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "GetDatabaseInstance",

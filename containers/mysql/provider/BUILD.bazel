@@ -32,6 +32,9 @@ go_test(
 
 go_image(
     name = "provider",
+    data = [
+        "//healthcheck",
+    ],
     embed = [":provider_lib"],
     visibility = ["//visibility:public"],
 )

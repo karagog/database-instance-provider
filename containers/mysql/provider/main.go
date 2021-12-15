@@ -23,13 +23,6 @@ func main() {
 	flag.Parse()
 	flag.Set("alsologtostderr", "true")
 
-	p, err := initContainer(context.Background(),
-		getEnvOrDie("MYSQL_ROOT_HOST"),
-		getConnectionParamsOrDie())
-	if err != nil {
-		glog.Fatal(err)
-	}
-
 	portStr := getEnvOrDie("PROVIDER_PORT")
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
@@ -44,17 +37,29 @@ func main() {
 
 	// Start up the server.
 	svc := &service.Service{
-		Clock:  simulated.NewClock(time.Now()),
-		Lessor: lessor.New(p, count),
+		Clock: simulated.NewClock(time.Now()),
 	}
-	go svc.Lessor.Run(context.Background())
-
 	r, err := runner.New(svc, fmt.Sprintf(":%d", port))
 	if err != nil {
 		glog.Fatal(err)
 	}
 	glog.Infof("Starting service on %s", r.Address())
-	r.Run()
+	go r.Run()
+
+	p, err := initContainer(context.Background(),
+		getEnvOrDie("MYSQL_ROOT_HOST"),
+		getConnectionParamsOrDie())
+	if err != nil {
+		glog.Fatal(err)
+	}
+
+	// Now that the database is initialized, update the service which tells
+	// clients that it's okay to request databases.
+	l := lessor.New(p, count)
+	svc.SetLessor(l)
+
+	// Block here indifinitely while the service runs.
+	l.Run(context.Background())
 }
 
 // initContainer initializes the docker container and returns a provider object.

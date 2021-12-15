@@ -41,3 +41,12 @@ docker_push(
     repository = "karagog/mysql-db-provider",
     tag = "latest",
 )
+
+# Use this to push the dev version.
+docker_push(
+    name = "push_dev",
+    image = "//containers/mysql/provider",
+    registry = "index.docker.io",
+    repository = "karagog/mysql-db-provider",
+    tag = "dev",
+)

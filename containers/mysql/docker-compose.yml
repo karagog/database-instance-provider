@@ -24,6 +24,13 @@ services:
     # See README.md for details.
     image: "${DOCKER_REGISTRY_ADDRESS:-index.docker.io}/karagog/mysql-db-provider:latest"
 
+    healthcheck:
+      test: ["CMD", "./healthcheck/healthcheck_/healthcheck"]
+      interval: 1m30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+      
     # Keep the service running even after machine reboots.
     restart: "always"
     ports:

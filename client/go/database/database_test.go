@@ -29,11 +29,12 @@ func TestDatabase(t *testing.T) {
 		},
 	}
 	svc := &service.Service{
-		Clock:  simulated.NewClock(time.Now()),
-		Lessor: lessor.New(provider, 1),
+		Clock: simulated.NewClock(time.Now()),
 	}
+	l := lessor.New(provider, 1)
+	svc.SetLessor(l)
 	ctx := context.Background()
-	go svc.Lessor.Run(ctx)
+	go l.Run(ctx)
 
 	r, err := runner.New(svc, "localhost:0")
 	if err != nil {

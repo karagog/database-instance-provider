@@ -17,11 +17,12 @@ import (
 func TestRunner(t *testing.T) {
 	// Initialize a fake service for testing.
 	svc := &service.Service{
-		Clock:  simulated.NewClock(time.Now()),
-		Lessor: lessor.New(&fake.DatabaseProvider{}, 1),
+		Clock: simulated.NewClock(time.Now()),
 	}
+	l := lessor.New(&fake.DatabaseProvider{}, 1)
+	svc.SetLessor(l)
 	ctx := context.Background()
-	go svc.Lessor.Run(ctx)
+	go l.Run(ctx)
 
 	// Create a new runner object, to provide the service on a random local port.
 	r, err := New(svc, "localhost:0")

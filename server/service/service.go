@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -15,12 +17,44 @@ import (
 type Service struct {
 	pb.UnimplementedIntegrationTestServer
 
-	Clock  clock.Clock
-	Lessor *lessor.Lessor
+	Clock clock.Clock
+
+	mu     sync.Mutex
+	lessor *lessor.Lessor
+}
+
+func (s *Service) GetStatus(ctx context.Context, _ *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
+	ret := &pb.GetStatusResponse{State: pb.GetStatusResponse_UNKNOWN_STATE}
+	s.mu.Lock()
+	if s.lessor == nil {
+		ret.State = pb.GetStatusResponse_STARTING
+	} else {
+		ret.State = pb.GetStatusResponse_UP
+	}
+	s.mu.Unlock()
+	return ret, nil
+}
+
+// Sets the lessor sometime after creation, which allows the server to start providing databases.
+// Until that point, the status RPC will show that we're still starting up.
+func (s *Service) SetLessor(l *lessor.Lessor) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lessor = l
 }
 
 func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstanceServer) error {
 	glog.V(3).Infof("Handling GetDatabaseInstance request...")
+	var l *lessor.Lessor
+	func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		l = s.lessor
+	}()
+
+	if l == nil {
+		return fmt.Errorf("database provider is not ready yet - check the status RPC")
+	}
 
 	// Get the first message from the stream, which initiates the request.
 	if _, err := srv.Recv(); err != nil {
@@ -50,7 +84,7 @@ func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstance
 	ctx, cancel := context.WithCancel(srv.Context())
 	go func(ctx context.Context) {
 		defer func() { leaseCh <- true }()
-		gotHandle, err := s.Lessor.Lease(ctx)
+		gotHandle, err := l.Lease(ctx)
 		if err != nil {
 			leaseErr = err
 			return
@@ -74,7 +108,7 @@ func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstance
 			// Client disconnected?
 			cancelAndJoinLeaseRequest()
 			if lease != nil {
-				s.Lessor.Return(lease)
+				l.Return(lease)
 			}
 			return err
 		}
@@ -102,7 +136,7 @@ func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstance
 			status = "lease active"
 			// Notify the client that the lease is active.
 			resp := &pb.GetDatabaseInstanceResponse{
-				ConnectionInfo: s.Lessor.ConnectionInfo(lease),
+				ConnectionInfo: l.ConnectionInfo(lease),
 			}
 			if err := sendResp(resp); err != nil {
 				return err
@@ -117,14 +151,14 @@ func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstance
 				glog.V(2).Infof("Recieved client error: %v", err)
 			}
 			if lease != nil {
-				s.Lessor.Return(lease)
+				l.Return(lease)
 			}
 			return err
 		case <-srv.Context().Done():
 			glog.V(3).Infof("Client's request context is done")
 			cancelAndJoinLeaseRequest()
 			if lease != nil {
-				s.Lessor.Return(lease)
+				l.Return(lease)
 			}
 			return nil
 		}

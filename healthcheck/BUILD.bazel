@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "healthcheck_lib",
+    srcs = ["healthcheck.go"],
+    importpath = "github.com/karagog/db-provider/healthcheck",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//server/proto",
+        "@com_github_golang_glog//:glog",
+        "@org_golang_google_grpc//:grpc",
+    ],
+)
+
+go_binary(
+    name = "healthcheck",
+    embed = [":healthcheck_lib"],
+    visibility = ["//visibility:public"],
+)

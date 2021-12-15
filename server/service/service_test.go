@@ -24,8 +24,9 @@ const (
 // Gives us control over the server.
 type serverCtl struct {
 	clock       *simulated.Clock // control the server time
-	serviceAddr string           // access the server address (const)
-	lessor      *lessor.Lessor   // interact with the lessor
+	service     *Service
+	serviceAddr string         // access the server address (const)
+	lessor      *lessor.Lessor // interact with the lessor
 }
 
 // Starts up the test service listening on localhost. The service will use
@@ -54,10 +55,8 @@ func startServer(t *testing.T) (ctl *serverCtl, stop func()) {
 		l.Run(lessorCtx)
 	}()
 
-	pb.RegisterIntegrationTestServer(s, &Service{
-		Clock:  c,
-		Lessor: l,
-	})
+	svc := &Service{Clock: c}
+	pb.RegisterIntegrationTestServer(s, svc)
 	shuttingDown := false
 	done := make(chan bool)
 	go func() {
@@ -72,6 +71,7 @@ func startServer(t *testing.T) (ctl *serverCtl, stop func()) {
 	}()
 	ctl = &serverCtl{
 		clock:       c,
+		service:     svc,
 		serviceAddr: ls.Addr().String(),
 		lessor:      l,
 	}
@@ -89,9 +89,42 @@ func startServer(t *testing.T) (ctl *serverCtl, stop func()) {
 	}
 }
 
+func TestGetStatus(t *testing.T) {
+	server, stop := startServer(t)
+	defer stop()
+
+	conn, err := grpc.Dial(server.serviceAddr, grpc.WithInsecure())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	cli := pb.NewIntegrationTestClient(conn)
+	resp, err := cli.GetStatus(ctx, &pb.GetStatusRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := resp.State, pb.GetStatusResponse_STARTING; got != want {
+		t.Fatalf("Got %v, want %v", got, want)
+	}
+
+	// Assign the lessor, which is the signal that tells it that it's started.
+	server.service.SetLessor(server.lessor)
+
+	resp, err = cli.GetStatus(ctx, &pb.GetStatusRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := resp.State, pb.GetStatusResponse_UP; got != want {
+		t.Fatalf("Got %v, want %v", got, want)
+	}
+}
+
 // Test a nominal client-server interaction.
 func TestGetDatabaseInstance(t *testing.T) {
 	server, stop := startServer(t)
+	server.service.SetLessor(server.lessor)
 	defer stop()
 
 	// There is only one lease available, so let's grab it now to cause
@@ -101,7 +134,7 @@ func TestGetDatabaseInstance(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := newTestClient(server.serviceAddr, t)
+	c := doGetDatabaseInstance(server.serviceAddr, t)
 	go c.Run()
 
 	// The server should wait for the first request from the client.
@@ -165,11 +198,23 @@ func TestGetDatabaseInstance(t *testing.T) {
 	}
 }
 
-func TestServerDisconnect(t *testing.T) {
+// This tests what happens if you query for a database before the provider
+// has been fully initialized.
+func TestServerNotReady(t *testing.T) {
 	server, stop := startServer(t)
 	defer stop()
 
-	c := newTestClient(server.serviceAddr, t)
+	c := doGetDatabaseInstance(server.serviceAddr, t)
+	go c.Run()
+	c.AssertError("", nil, t)
+}
+
+func TestServerDisconnect(t *testing.T) {
+	server, stop := startServer(t)
+	server.service.SetLessor(server.lessor)
+	defer stop()
+
+	c := doGetDatabaseInstance(server.serviceAddr, t)
 	go c.Run()
 	if err := c.stream.Send(&pb.GetDatabaseInstanceRequest{}); err != nil {
 		t.Fatal(err)
@@ -185,6 +230,7 @@ func TestServerDisconnect(t *testing.T) {
 
 func TestClientGivesUpWithoutLease(t *testing.T) {
 	server, stop := startServer(t)
+	server.service.SetLessor(server.lessor)
 	defer stop()
 
 	// Grab and hold the only lease so the client can't get it.
@@ -192,7 +238,7 @@ func TestClientGivesUpWithoutLease(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := newTestClient(server.serviceAddr, t)
+	c := doGetDatabaseInstance(server.serviceAddr, t)
 	go c.Run()
 	if err := c.stream.Send(&pb.GetDatabaseInstanceRequest{}); err != nil {
 		t.Fatal(err)
@@ -208,9 +254,10 @@ func TestClientGivesUpWithoutLease(t *testing.T) {
 
 func TestClientClosesConnectionBeforeFirstMessage(t *testing.T) {
 	server, stop := startServer(t)
+	server.service.SetLessor(server.lessor)
 	defer stop()
 
-	c := newTestClient(server.serviceAddr, t)
+	c := doGetDatabaseInstance(server.serviceAddr, t)
 	go c.Run()
 
 	if err := c.stream.CloseSend(); err != nil {
@@ -229,7 +276,7 @@ type testClient struct {
 	errCh  chan error
 }
 
-func newTestClient(addr string, t *testing.T) *testClient {
+func doGetDatabaseInstance(addr string, t *testing.T) *testClient {
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
@@ -280,6 +327,7 @@ func (c *testClient) GetResponse(desc string, t *testing.T) (resp *pb.GetDatabas
 	return
 }
 
+// If `expErr` is nil, then accept any error. Otherwise it checks if the error objects are equal.
 func (c *testClient) AssertError(desc string, expErr error, t *testing.T) {
 	select {
 	case resp := <-c.respCh:

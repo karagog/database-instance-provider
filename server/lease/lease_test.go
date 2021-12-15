@@ -16,13 +16,14 @@ import (
 
 // Starts up a fake database provider service in-memory.
 func fakeServiceRunner(numInstances int, t *testing.T) *runner.Runner {
-	lor := lessor.New(&fake.DatabaseProvider{}, numInstances)
-	go lor.Run(context.Background())
+	l := lessor.New(&fake.DatabaseProvider{}, numInstances)
+	go l.Run(context.Background())
 
-	r, err := runner.New(&service.Service{
-		Clock:  simulated.NewClock(time.Now()),
-		Lessor: lor,
-	}, "localhost:0")
+	svc := &service.Service{
+		Clock: simulated.NewClock(time.Now()),
+	}
+	svc.SetLessor(l)
+	r, err := runner.New(svc, "localhost:0")
 	if err != nil {
 		t.Fatal(err)
 	}
