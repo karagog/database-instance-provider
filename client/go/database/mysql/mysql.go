@@ -19,6 +19,7 @@ func ConnectOrDie(d *pb.ConnectionDetails) *sql.DB {
 
 // Connects to the database instance using the Mysql driver.
 func Connect(d *pb.ConnectionDetails) (*sql.DB, error) {
-	return sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true",
-		d.User, d.Password, d.Address, d.Port, d.Database))
+	return sql.Open("mysql",
+		fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true",
+			d.User, d.Password, d.Address, d.Port, d.Database))
 }
