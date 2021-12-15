@@ -2,14 +2,39 @@ name: Go
 
 on:
   push:
-    branches: [ master ]
+    branches: [ ci ]
   pull_request:
     branches: [ master ]
 
 jobs:
-
-  build:
+  test-job:
     runs-on: ubuntu-latest
+
+    services:
+      # The database provider is needed to spawn database instances for
+      # unit integration tests.
+      database:
+        image: mysql/mysql-server:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_ROOT_HOST: "%"
+        ports:
+          - 53983:3306
+
+      provider:
+        image: karagog/mysql-db-provider:dev
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_ROOT_HOST: "%"
+          PROVIDER_MYSQL_ADDRESS: database
+          PROVIDER_MYSQL_PORT: 53983
+          PROVIDER_PORT: 58615
+          PROVIDER_MYSQL_USER: test
+          PROVIDER_MYSQL_USER_PASSWORD: test
+          PROVIDER_DB_INSTANCES: 20
+        ports:
+          - 58615:58615
+
     steps:
     - uses: actions/checkout@v2
 
@@ -18,8 +43,23 @@ jobs:
       with:
         go-version: 1.17
 
+    # TODO: Add a health check to the container once
+    # https://github.com/bazelbuild/rules_docker/pull/1742 or something like it
+    # is merged, so we don't have to sleep-wait.
+    - name: Wait for service to start up
+      run: sleep 30
+
+    - name: Show logs
+      run: |
+        echo "${{ toJson(job) }}"
+        docker logs "${{ job.services.provider.id }}"
+        docker logs "${{ job.services.database.id }}"
+
     - name: Build
       run: go build -v ./...
 
     - name: Test
+      env: 
+          # This tells unit tests where to find the instance provider.
+          DB_INSTANCE_PROVIDER_ADDRESS: localhost:58615
       run: go test -v ./...

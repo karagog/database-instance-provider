@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//server/proto",
         "@com_github_go_sql_driver_mysql//:mysql",
+        "@com_github_golang_glog//:glog",
     ],
 )
 
