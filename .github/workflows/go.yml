@@ -12,7 +12,7 @@ jobs:
 
     # Run the tests inside the container so they have direct access to the service containers.
     container:
-      image:  node:17
+      image:  node:17-alpine
 
     services:
       # The database provider is needed to spawn database instances for
