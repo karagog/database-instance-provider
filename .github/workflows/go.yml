@@ -40,10 +40,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.17
+    # There is no need for us to explicitly set up Go because we're using the Golang container image.
+    # - name: Set up Go
+    #  uses: actions/setup-go@v2
+    #  with:
+    #    go-version: 1.17
 
     # Keep this around (but commented) because it can be useful to debug if the service is failing.
     # - name: Show logs
