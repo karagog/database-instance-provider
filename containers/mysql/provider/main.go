@@ -108,11 +108,10 @@ func runMysqlCmd(ctx context.Context, db *sql.DB, cmd string) error {
 		if err == nil {
 			return nil
 		}
-		glog.V(2).Info(err)
-
 		if ctx.Err() != nil {
-			return fmt.Errorf("context canceled, last error: %s", err)
+			return fmt.Errorf("gave up retrying connection, last error: %s", err)
 		}
+		glog.Warningf("Error while trying to connect to MySQL (will retry): %s", err)
 		time.Sleep(time.Second)
 	}
 }
