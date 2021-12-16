@@ -18,7 +18,7 @@ jobs:
       # The database provider is needed to spawn database instances for
       # unit integration tests.
       database:
-        image: mysql:8.0
+        image: mysql/mysql-server:8.0
         env:
           MYSQL_ROOT_PASSWORD: test
           MYSQL_ROOT_HOST: "%"
