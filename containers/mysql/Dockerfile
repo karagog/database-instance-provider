@@ -13,7 +13,7 @@ RUN go build -o /mysql-db-provider ./containers/mysql/provider
 RUN go build -o /healthcheck ./healthcheck
 
 # Add the health check so Docker will know when the service is healthy.
-HEALTHCHECK --interval=3s --timeout=5s --retries=3 \
+HEALTHCHECK --interval=1s --timeout=5s --retries=3 \
   CMD "/healthcheck"
 
 # Run the database provider executable.
