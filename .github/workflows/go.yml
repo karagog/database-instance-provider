@@ -12,7 +12,7 @@ jobs:
 
     # Run the tests inside the container so they have direct access to the service containers.
     container:
-      image:  golang:1.17
+      image:  karagog/cloud-builder:latest
 
     services:
       # The database provider is needed to spawn database instances for
@@ -40,30 +40,20 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    # Some extra packages are required, for example when running bazel build.
-    - name: Install Ubuntu Packages
-      run: |
-        apt-get update
-        apt-get install -y \
-          build-essential \
-          patch \
-          python-is-python3
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
 
-    # There is no need for us to explicitly set up Go because we're using the Golang container image.
-    # - name: Set up Go
-    #  uses: actions/setup-go@v2
-    #  with:
-    #    go-version: 1.17
+    - name: Build
+      run: go build -v ./...
 
-    # Keep this around (but commented) because it can be useful to debug if the service is failing.
+    # Keep this around (but commented) because it can be useful to debug why a service is unavailable.
     # - name: Show logs
     #   run: |
     #     echo "${{ toJson(job) }}"
     #     docker logs "${{ job.services.provider.id }}"
     #     docker logs "${{ job.services.database.id }}"
-
-    - name: Build
-      run: go build -v ./...
 
     - name: Test
       env: 
