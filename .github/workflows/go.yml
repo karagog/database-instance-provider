@@ -1,4 +1,4 @@
-name: Go
+name: Regression Test
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  test-job:
+  regression-test:
     runs-on: ubuntu-latest
 
     # Run the tests inside the container so they have direct access to the service containers.
@@ -39,6 +39,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Install Ubuntu Packages
+      run: |
+        apt-get update
+        apt-get install -y \
+          patch
 
     # There is no need for us to explicitly set up Go because we're using the Golang container image.
     # - name: Set up Go
