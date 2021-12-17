@@ -22,15 +22,8 @@ services:
     # Simply update the DOCKER_REGISTRY_ADDRESS in the .env file (or in your local
     # bash environment) to fetch it from a different registry.
     # See README.md for details.
-    image: "${DOCKER_REGISTRY_ADDRESS:-index.docker.io}/karagog/mysql-db-provider:latest"
+    image: "${DOCKER_REGISTRY_ADDRESS:-index.docker.io}/karagog/mysql-db-provider:dev"
 
-    healthcheck:
-      test: ["CMD", "./healthcheck/healthcheck_/healthcheck"]
-      interval: 1m30s
-      timeout: 5s
-      retries: 3
-      start_period: 40s
-      
     # Keep the service running even after machine reboots.
     restart: "always"
     ports:
