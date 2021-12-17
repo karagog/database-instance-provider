@@ -66,3 +66,12 @@ jobs:
       # Run all unit tests plus integration tests. We can safely run integration tests because
       # we set up the necessary service containers.
       run: go test -v ./... -tags=integration
+
+    - name: Install Bazel
+      uses: bazelbuild/setup-bazelisk@v1
+
+    # Make sure the Bazel toolchain works successfully.
+    - name: Bazel Build & Test
+      run: |
+        bazel test //... \
+          --test_env=DB_INSTANCE_PROVIDER_ADDRESS=provider:58615
