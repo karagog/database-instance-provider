@@ -39,39 +39,31 @@ containers/mysql$ docker-compose up -d
 The latest built container is hosted at https://hub.docker.com/r/karagog/mysql-db-provider, but you can build/fetch your own locally-built version by following the directions [below](#deploying-from-a-locally-built-version).
 
 ### Running the Example Tests
-There are example integration tests available for you to study and use as a starting point for your own integration tests. You can run it with Bazel or Golang toolchains:
+There are example integration tests available for you to study and use as a starting point for your own integration tests.
 
 ```bash
-# Test using Bazel toolchain:
-$ bazel test //client/go/database/mysql/example:example_test
-
-# Test using Golang toolchain:
-$ go test github.com/karagog/db-provider/client/go/database/mysql/example/...
+# Note that you can run without the tag and it will only run unit tests.
+$ go test ./... -tags=integration
 ```
 
 ## Deploying From A Locally-Built Version
 You can build the container yourself from source code and deploy that version by following these instructions. This is useful, for example, if you want to make changes to the container and test them quickly, or if you depend on a specific version of the service. For most use cases, however, you should be able to deploy the publicly provided version.
 
 ### Pushing A New Container Version
-This repo uses Bazel rules to build the applications and docker containers, so building and pushing an image is as simple as:
+This repo uses Dockerfiles to build the applications and docker containers, so building and pushing an image is as simple as:
 
 ```bash
-# Make sure you have a local registry service running
-# (you only need to do this once):
-$ docker run -d -p 5000:5000 --restart=always --name registry registry:2
+# Run this command from the workspace root:
+$ docker build -f containers/mysql/Dockerfile . -t karagog/mysql-db-provider:latest
 
-# This pushes to the local Docker registry:
-$ bazel run //containers/mysql:push_local
+$ docker push karagog/mysql-db-provider:latest
 ```
 
 ### Pulling and Running
 After pushing to the local registry you can pull the image and run it, simply by updating an environment variable with the address of your registry service (usually localhost:5000):
 
 ```bash
-# Update the environment to fetch from the local registry:
-containers/mysql$ export DOCKER_REGISTRY_ADDRESS=localhost:5000
-
-# Pull and run the local image:
+# Pull and run the image:
 containers/mysql$ docker-compose pull
 containers/mysql$ docker-compose up
 ```
@@ -80,13 +72,7 @@ containers/mysql$ docker-compose up
 Anyone is welcome to submit pull requests for new features and/or new database types and language-specific client libraries. They should be fairly straightforward to add if you follow the existing examples.
 
 ### Pre-Submit Testing
-Run `scripts/presubmit.sh` to run all tests before submitting a pull request. That script is the source of truth for any necessary validations.
-
-```bash
-$ ./scripts/presubmit.sh
-```
-
-You must ensure that the exit code was 0, and if any files were changed that you commit those changes as well (e.g. updated BUILD, or auto-formatted files).
+There are GitHub actions configured on this repository, so simply create a pull request to the master branch and watch the checks run!
 
 ## A Note on Parallelism
 The database provider service initializes a pool of databases that are ready to go whenever needed, so it supports parallelism up to this limit. You can configure the size of this pool through the use of environment variables (see the code for reference), but keep in mind that it only makes sense for the pool to be as large as the number of tests you plan to run concurrently, otherwise there could be a large portion of the instance pool that is always idle. This is likely not an issue unless you are initializing a very large pool (e.g. thousands or millions of databases).
