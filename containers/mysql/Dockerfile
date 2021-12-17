@@ -11,16 +11,9 @@ WORKDIR /src/mysql-db-provider
 COPY . ./
 RUN go build -o /mysql-db-provider ./containers/mysql/provider
 RUN go build -o /healthcheck ./healthcheck
-RUN go build -o /healthcheck ./healthcheck
-
-# Change the workdir after building successfully, because we'll throw away the source.
-WORKDIR /
-
-# Remove the source code and Go modules after building, to reduce space.
-RUN rm /src "$GOPATH/pkg/*" -rf
 
 # Add the health check so Docker will know when the service is healthy.
-HEALTHCHECK --interval=90s --timeout=5s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD "/healthcheck"
 
 # Run the database provider executable.
