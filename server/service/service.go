@@ -29,13 +29,7 @@ func New(clock clock.Clock) *Service {
 }
 
 func (s *Service) GetStatus(ctx context.Context, _ *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
-	ret := &pb.GetStatusResponse{State: pb.GetStatusResponse_UNKNOWN_STATE}
-	if s.lessor == nil {
-		ret.State = pb.GetStatusResponse_STARTING
-	} else {
-		ret.State = pb.GetStatusResponse_UP
-	}
-	return ret, nil
+	return &pb.GetStatusResponse{State: pb.GetStatusResponse_UP}, nil
 }
 
 // Sets the lessor sometime after creation, which allows the server to start providing databases.

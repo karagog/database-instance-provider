@@ -104,11 +104,12 @@ func TestGetStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got, want := resp.State, pb.GetStatusResponse_STARTING; got != want {
+	// Check that the status is reported as "up" regardless if the database is present.
+	if got, want := resp.State, pb.GetStatusResponse_UP; got != want {
 		t.Fatalf("Got %v, want %v", got, want)
 	}
 
-	// Assign the lessor, which is the signal that tells it that it's started.
+	// Assign the lessor, which is the signal that tells it to start providing databases.
 	server.service.SetLessor(server.lessor)
 
 	resp, err = cli.GetStatus(ctx, &pb.GetStatusRequest{})

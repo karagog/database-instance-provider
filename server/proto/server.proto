@@ -28,8 +28,7 @@ message GetStatusRequest {}
 message GetStatusResponse {
   enum State {
     UNKNOWN_STATE = 0;
-    STARTING = 1;
-    UP = 2;
+    UP = 1;
   }
 
   // State tells us the current state of the service, for example so the test environment
