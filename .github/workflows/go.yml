@@ -1,4 +1,4 @@
-name: Go
+name: Regression Test
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  test-job:
+  regression-test:
     runs-on: ubuntu-latest
 
     # Run the tests inside the container so they have direct access to the service containers.
@@ -18,7 +18,7 @@ jobs:
       # The database provider is needed to spawn database instances for
       # unit integration tests.
       database:
-        image: mysql/mysql-server:8.0
+        image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: test
           MYSQL_ROOT_HOST: "%"
@@ -39,6 +39,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
+    # Some extra packages are required, for example when running bazel build.
+    - name: Install Ubuntu Packages
+      run: |
+        apt-get update
+        apt-get install -y \
+          build-essential \
+          patch \
+          python-is-python3
 
     # There is no need for us to explicitly set up Go because we're using the Golang container image.
     # - name: Set up Go
@@ -66,3 +75,12 @@ jobs:
       # Run all unit tests plus integration tests. We can safely run integration tests because
       # we set up the necessary service containers.
       run: go test -v ./... -tags=integration
+
+    - name: Install Bazel
+      uses: bazelbuild/setup-bazelisk@v1
+
+    # Make sure the Bazel toolchain works successfully.
+    - name: Bazel Build & Test
+      run: |
+        bazel test //... \
+          --test_env=DB_INSTANCE_PROVIDER_ADDRESS=provider:58615

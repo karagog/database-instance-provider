@@ -55,7 +55,7 @@ func startServer(t *testing.T) (ctl *serverCtl, stop func()) {
 		l.Run(lessorCtx)
 	}()
 
-	svc := &Service{Clock: c}
+	svc := New(c)
 	pb.RegisterIntegrationTestServer(s, svc)
 	shuttingDown := false
 	done := make(chan bool)
@@ -199,14 +199,14 @@ func TestGetDatabaseInstance(t *testing.T) {
 }
 
 // This tests what happens if you query for a database before the provider
-// has been fully initialized.
+// has been fully initialized: it should block indefinitely.
 func TestServerNotReady(t *testing.T) {
 	server, stop := startServer(t)
 	defer stop()
 
 	c := doGetDatabaseInstance(server.serviceAddr, t)
 	go c.Run()
-	c.AssertError("", nil, t)
+	c.AssertNoResponse("", t)
 }
 
 func TestServerDisconnect(t *testing.T) {

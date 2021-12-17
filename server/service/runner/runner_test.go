@@ -16,9 +16,7 @@ import (
 
 func TestRunner(t *testing.T) {
 	// Initialize a fake service for testing.
-	svc := &service.Service{
-		Clock: simulated.NewClock(time.Now()),
-	}
+	svc := service.New(simulated.NewClock(time.Now()))
 	l := lessor.New(&fake.DatabaseProvider{}, 1)
 	svc.SetLessor(l)
 	ctx := context.Background()

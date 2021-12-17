@@ -28,9 +28,7 @@ func TestDatabase(t *testing.T) {
 			},
 		},
 	}
-	svc := &service.Service{
-		Clock: simulated.NewClock(time.Now()),
-	}
+	svc := service.New(simulated.NewClock(time.Now()))
 	l := lessor.New(provider, 1)
 	svc.SetLessor(l)
 	ctx := context.Background()

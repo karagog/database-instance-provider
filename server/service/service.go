@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -17,49 +16,56 @@ import (
 type Service struct {
 	pb.UnimplementedIntegrationTestServer
 
-	Clock clock.Clock
+	clock    clock.Clock
+	initDone chan bool
+	lessor   *lessor.Lessor
+}
 
-	mu     sync.Mutex
-	lessor *lessor.Lessor
+func New(clock clock.Clock) *Service {
+	return &Service{
+		clock:    clock,
+		initDone: make(chan bool),
+	}
 }
 
 func (s *Service) GetStatus(ctx context.Context, _ *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
 	ret := &pb.GetStatusResponse{State: pb.GetStatusResponse_UNKNOWN_STATE}
-	s.mu.Lock()
 	if s.lessor == nil {
 		ret.State = pb.GetStatusResponse_STARTING
 	} else {
 		ret.State = pb.GetStatusResponse_UP
 	}
-	s.mu.Unlock()
 	return ret, nil
 }
 
 // Sets the lessor sometime after creation, which allows the server to start providing databases.
-// Until that point, the status RPC will show that we're still starting up.
+// Until that point, the status RPC will show that we're still starting up, and
+// requests for database instances will block indefinitely until it's available.
+// This can only be set once, setting it twice is a fatal error.
 func (s *Service) SetLessor(l *lessor.Lessor) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if s.lessor != nil {
+		panic("lessor has already been set")
+	}
 	s.lessor = l
+	close(s.initDone)
 }
 
 func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstanceServer) error {
 	glog.V(3).Infof("Handling GetDatabaseInstance request...")
-	var l *lessor.Lessor
-	func() {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		l = s.lessor
-	}()
-
-	if l == nil {
-		return fmt.Errorf("database provider is not ready yet - check the status RPC")
-	}
 
 	// Get the first message from the stream, which initiates the request.
 	if _, err := srv.Recv(); err != nil {
 		glog.Errorf("Error receiving first message in stream: %v", err)
 		return err
+	}
+
+	// Wait here indefinitely until the provider is ready.
+	for s.lessor == nil {
+		select {
+		case <-srv.Context().Done():
+			return fmt.Errorf("client cancelled")
+		case <-s.initDone:
+		}
 	}
 
 	// Spawn a goroutine for consuming further messages (if any) from the client.
@@ -84,7 +90,7 @@ func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstance
 	ctx, cancel := context.WithCancel(srv.Context())
 	go func(ctx context.Context) {
 		defer func() { leaseCh <- true }()
-		gotHandle, err := l.Lease(ctx)
+		gotHandle, err := s.lessor.Lease(ctx)
 		if err != nil {
 			leaseErr = err
 			return
@@ -108,7 +114,7 @@ func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstance
 			// Client disconnected?
 			cancelAndJoinLeaseRequest()
 			if lease != nil {
-				l.Return(lease)
+				s.lessor.Return(lease)
 			}
 			return err
 		}
@@ -119,7 +125,7 @@ func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstance
 	}
 	status := "waiting for lease"
 	period := 10 * time.Second
-	tmr := s.Clock.NewTimer(period)
+	tmr := s.clock.NewTimer(period)
 	for {
 		select {
 		case <-tmr.C():
@@ -136,7 +142,7 @@ func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstance
 			status = "lease active"
 			// Notify the client that the lease is active.
 			resp := &pb.GetDatabaseInstanceResponse{
-				ConnectionInfo: l.ConnectionInfo(lease),
+				ConnectionInfo: s.lessor.ConnectionInfo(lease),
 			}
 			if err := sendResp(resp); err != nil {
 				return err
@@ -151,14 +157,14 @@ func (s *Service) GetDatabaseInstance(srv pb.IntegrationTest_GetDatabaseInstance
 				glog.V(2).Infof("Recieved client error: %v", err)
 			}
 			if lease != nil {
-				l.Return(lease)
+				s.lessor.Return(lease)
 			}
 			return err
 		case <-srv.Context().Done():
 			glog.V(3).Infof("Client's request context is done")
 			cancelAndJoinLeaseRequest()
 			if lease != nil {
-				l.Return(lease)
+				s.lessor.Return(lease)
 			}
 			return nil
 		}
