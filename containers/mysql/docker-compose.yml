@@ -2,7 +2,7 @@ version: "3.9"
 services:
   # We need to run a dedicated Mysql server instance to provide the databases.
   mysqld:
-    image: "mysql/mysql-server:8.0"
+    image: "mysql:8.0"
 
     # Keep the service running even after machine reboots.
     restart: "always"
@@ -24,13 +24,6 @@ services:
     # See README.md for details.
     image: "${DOCKER_REGISTRY_ADDRESS:-index.docker.io}/karagog/mysql-db-provider:latest"
 
-    healthcheck:
-      test: ["CMD", "./healthcheck/healthcheck_/healthcheck"]
-      interval: 1m30s
-      timeout: 5s
-      retries: 3
-      start_period: 40s
-      
     # Keep the service running even after machine reboots.
     restart: "always"
     ports:
