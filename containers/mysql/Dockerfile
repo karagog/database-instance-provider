@@ -20,8 +20,8 @@ WORKDIR /
 RUN rm /src "$GOPATH/pkg/*" -rf
 
 # Add the health check so Docker will know when the service is healthy.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD "/healthcheck"
+# HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+#   CMD "/healthcheck"
 
 # Run the database provider executable.
 CMD [ "/mysql-db-provider" ]

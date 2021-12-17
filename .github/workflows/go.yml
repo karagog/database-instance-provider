@@ -24,7 +24,7 @@ jobs:
           MYSQL_ROOT_HOST: "%"
 
       provider:
-        image: karagog/mysql-db-provider:latest
+        image: karagog/mysql-db-provider:dev # DO NOT SUBMIT
         env:
           MYSQL_ROOT_PASSWORD: test
           MYSQL_ROOT_HOST: "%"
