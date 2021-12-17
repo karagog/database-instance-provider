@@ -44,7 +44,9 @@ jobs:
       run: |
         apt-get update
         apt-get install -y \
-          patch
+          build-essential \
+          patch \
+          python-is-python3
 
     # There is no need for us to explicitly set up Go because we're using the Golang container image.
     # - name: Set up Go
