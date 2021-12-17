@@ -36,9 +36,7 @@ func main() {
 	}
 
 	// Start up the server.
-	svc := &service.Service{
-		Clock: simulated.NewClock(time.Now()),
-	}
+	svc := service.New(simulated.NewClock(time.Now()))
 	r, err := runner.New(svc, fmt.Sprintf(":%d", port))
 	if err != nil {
 		glog.Fatal(err)

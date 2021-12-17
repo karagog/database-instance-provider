@@ -19,9 +19,7 @@ func fakeServiceRunner(numInstances int, t *testing.T) *runner.Runner {
 	l := lessor.New(&fake.DatabaseProvider{}, numInstances)
 	go l.Run(context.Background())
 
-	svc := &service.Service{
-		Clock: simulated.NewClock(time.Now()),
-	}
+	svc := service.New(simulated.NewClock(time.Now()))
 	svc.SetLessor(l)
 	r, err := runner.New(svc, "localhost:0")
 	if err != nil {
