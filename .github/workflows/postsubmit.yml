@@ -1,4 +1,4 @@
-name: Postsubmits
+name: Postsubmit
 on:
   push:
     branches: [ master ]
@@ -13,11 +13,13 @@ jobs:
     # developing on the workflows themselves.
     uses: karagog/db-provider/.github/workflows/presubmit.yml@master
 
-  # Pre-integration steps include building and deploying a candidate release
-  # container for the integration step to follow.
-  pre-integrate:
+  # Build and deploy a release candidate which we'll integration test in the following step.
+  integrate:
     runs-on: ubuntu-latest
     needs: smoke
+    outputs:
+      # Output the digest for the image that gets built, so we can pull it in subsequent steps.
+      digest: ${{ steps.deploy-candidate.outputs.digest }}
     steps:
     - uses: actions/checkout@v2
 
@@ -30,7 +32,8 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-    - name: Deploy
+    - name: Deploy Candidate
+      id: deploy-candidate
       uses: docker/build-push-action@v2
       with:
         context: .
@@ -38,32 +41,19 @@ jobs:
         push: true
         tags: ${{ secrets.DOCKER_HUB_USERNAME }}/mysql-db-provider:postsubmit
 
-  integrate-and-deploy:
+  test-and-deploy-latest:
     runs-on: ubuntu-latest
-    needs: pre-integrate
+    needs: integrate
 
-    # Run the tests inside the container so they have direct access to the service containers.
     container:
       image:  karagog/cloud-builder:latest
 
     services:
-      # The database provider is needed to spawn database instances for
-      # unit integration tests.
-      database:
-        image: mysql:8.0
-        volumes:
-          # Using tmpfs dramatically improves the startup time and overall
-          # performance of the service. 
-          - "tmpfs:/var/lib/mysql"
-        env:
-          MYSQL_ROOT_PASSWORD: test
-          MYSQL_ROOT_HOST: "%"
-
+      # The database provider is needed to spawn database instances for integration tests.
       provider:
-        # TODO: We need to reference the exact version that was built in the pre-integrate
-        # step. Currently this can race if multiple postsubmits are done simultaneously.
-        # I think we can do that by using job outputs to pass the version string.
-        image: karagog/mysql-db-provider:postsubmit
+        # Notice that we use the exact same image that was built during pre-integration,
+        # by referencing with its digest which we received as an output from the previous job.
+        image: karagog/mysql-db-provider@${{ needs.integrate.outputs.digest }}
         env:
           MYSQL_ROOT_PASSWORD: test
           MYSQL_ROOT_HOST: "%"
@@ -75,6 +65,16 @@ jobs:
           PROVIDER_MYSQL_USER: test
           PROVIDER_MYSQL_USER_PASSWORD: test
           PROVIDER_DB_INSTANCES: 20
+
+      database:
+        image: mysql:8.0
+        volumes:
+          # Using tmpfs dramatically improves the startup time and overall
+          # performance of the service.
+          - "tmpfs:/var/lib/mysql"
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_ROOT_HOST: "%"
 
     steps:
       - uses: actions/checkout@v2
@@ -99,10 +99,8 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Deploy Latest
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./containers/mysql/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/mysql-db-provider:latest
+      # We deploy latest by tagging the release candidate we just tested.
+      - name: Push Latest
+        run: |
+          docker tag karagog/mysql-db-provider@${{ needs.integrate.outputs.digest }} karagog/mysql-db-provider:latest
+          docker push karagog/mysql-db-provider:latest

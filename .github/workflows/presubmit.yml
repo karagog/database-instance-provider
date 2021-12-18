@@ -1,4 +1,4 @@
-name: Presubmits
+name: Presubmit
 
 on:
   workflow_call:
