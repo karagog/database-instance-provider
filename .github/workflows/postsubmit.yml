@@ -1,0 +1,47 @@
+name: Postsubmits
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  test-and-maybe-deploy:
+    runs-on: ubuntu-latest
+
+    # Run the tests inside the container so they have direct access to the service containers.
+    container:
+      image:  golang:1.17
+
+    services:
+      # The database provider is needed to spawn database instances for
+      # unit integration tests.
+      database:
+        image: mysql:8.0
+        volumes:
+          - "tmpfs:/var/lib/mysql"
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_ROOT_HOST: "%"
+
+      provider:
+        image: karagog/mysql-db-provider:${{ github.actor }}
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_ROOT_HOST: "%"
+
+          # We can reference the service's hostname because it's running in a Docker environment.
+          PROVIDER_MYSQL_ADDRESS: database
+          PROVIDER_MYSQL_PORT: 3306
+          PROVIDER_PORT: 58615
+          PROVIDER_MYSQL_USER: test
+          PROVIDER_MYSQL_USER_PASSWORD: test
+          PROVIDER_DB_INSTANCES: 20
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check Golang Format
+        run: gofmt -s -w .
+
+      - name: Integration Tests
+        run: |
+          go build -v ./...
+          go test -v ./... -tags=integration
