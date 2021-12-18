@@ -1,0 +1,37 @@
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_label:
+        description: "The label to deploy to."
+        default: "latest"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # DO NOT SUBMIT
+    - name: Dump input context
+      env:
+        JOB_CONTEXT: ${{ toJSON(input) }}
+      run: echo "$JOB_CONTEXT"
+
+    - name: Setup Docker Build
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+    - name: Deploy
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./containers/mysql/Dockerfile
+        push: true
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/mysql-db-provider:${{ inputs.deploy_label }}
