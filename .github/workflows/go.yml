@@ -27,6 +27,7 @@ jobs:
 
   deploy-dev-container:
     runs-on: ubuntu-latest
+    needs: unit-test
     steps:
       - uses: actions/checkout@v2
 
@@ -49,6 +50,7 @@ jobs:
 
   integration-test:
     runs-on: ubuntu-latest
+    needs: deploy-dev-container
 
     # Run the tests inside the container so they have direct access to the service containers.
     container:
@@ -102,6 +104,7 @@ jobs:
   # TODO: Is it possible (and safe) to update the tag from dev->latest without rebuilding?
   deploy-latest-container:
     runs-on: ubuntu-latest
+    needs: integration-test
     steps:
       - uses: actions/checkout@v2
 
