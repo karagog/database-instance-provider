@@ -15,15 +15,17 @@ FROM golang:1.17-alpine
 LABEL maintainer George Karagoulis <karagog@gmail.com>
 
 # Copy the source files to the container.
-WORKDIR /opt/mysql-db-provider
+ARG workdir=/opt/mysql-db-provider
+WORKDIR ${workdir}
 COPY . ./
 
-# Build the binaries.
-RUN mkdir bin
-RUN go build -o bin ./containers/mysql/provider
-RUN go build -o bin ./healthcheck
+# Build the binaries into the output directory.
+ARG output_dir=bin
+RUN mkdir ${output_dir}
 
-ENV PATH="/opt/mysql-db-provider/bin:${PATH}"
+RUN go build -o ${output_dir} ./containers/mysql/provider ./healthcheck
+
+ENV PATH="${workdir}/${output_dir}:${PATH}"
 
 # Add the health check so Docker will know when the service is healthy.
 # This polls on a tight interval to minimize the test setup time by marking
