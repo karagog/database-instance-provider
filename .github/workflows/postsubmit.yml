@@ -4,7 +4,7 @@ on:
     branches: [ master ]
 
 jobs:
-  test-and-maybe-deploy:
+  postsubmit:
     runs-on: ubuntu-latest
 
     # Run the tests inside the container so they have direct access to the service containers.
@@ -45,3 +45,5 @@ jobs:
         run: |
           go build -v ./...
           go test -v ./... -tags=integration
+        env:
+          DB_INSTANCE_PROVIDER_ADDRESS: provider:58615
