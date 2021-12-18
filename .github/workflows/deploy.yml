@@ -18,7 +18,7 @@ jobs:
 
     - name: Dump input context
       env:
-        JOB_CONTEXT: ${{ toJSON(github.events.inputs.deploy_label) }}
+        JOB_CONTEXT: ${{ toJSON(github.event.inputs.deploy_label) }}
       run: echo "$JOB_CONTEXT"
 
     - name: Setup Docker Build
