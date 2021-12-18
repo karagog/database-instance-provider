@@ -29,9 +29,9 @@ type Instance struct {
 //
 // You must Close() it when done to release your lock on the database.
 func NewFromEnv(ctx context.Context) *Instance {
-	addr := "172.17.0.1:58615"
+	var addr string
 	if v := os.Getenv("DB_INSTANCE_PROVIDER_ADDRESS"); v != "" {
-		addr = v
+		panic("missing required envvar: DB_INSTANCE_PROVIDER_ADDRESS")
 	}
 	return New(ctx, addr)
 }
