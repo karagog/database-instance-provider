@@ -4,7 +4,7 @@ on:
     inputs:
       deploy_label:
         description: "The label to deploy to."
-        default: "latest"
+        default: "dev"
         required: true
 
 jobs:
