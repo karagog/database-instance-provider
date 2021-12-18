@@ -1,4 +1,4 @@
-name: Regression Test
+name: Build, Test & Deploy
 
 on:
   push:
@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Show JSON
-      run: echo "${{ toJson(job) }}"
+    - name: Show context
+      run: echo $GITHUB_CONTEXT
 
     - name: Set up Go
       uses: actions/setup-go@v2
@@ -30,7 +30,7 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-  deploy-dev-container:
+  build-push-preview-container:
     runs-on: ubuntu-latest
     needs: unit-test
     steps:
@@ -51,11 +51,11 @@ jobs:
           context: .
           file: ./containers/mysql/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/mysql-db-provider:dev
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/mysql-db-provider:${{ github.actor }}
 
   integration-test:
     runs-on: ubuntu-latest
-    needs: deploy-dev-container
+    needs: build-push-preview-container
 
     # Run the tests inside the container so they have direct access to the service containers.
     container:
@@ -73,7 +73,7 @@ jobs:
           MYSQL_ROOT_HOST: "%"
 
       provider:
-        image: karagog/mysql-db-provider:dev
+        image: karagog/mysql-db-provider:${{ github.actor }}
         env:
           MYSQL_ROOT_PASSWORD: test
           MYSQL_ROOT_HOST: "%"
@@ -89,13 +89,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    # Keep this around (but commented) because it can be useful to debug why a service is unavailable.
-    # - name: Show logs
-    #   run: |
-    #     echo "${{ toJson(job) }}"
-    #     docker logs "${{ job.services.provider.id }}"
-    #     docker logs "${{ job.services.database.id }}"
-
     - name: Test
       # Run all unit tests plus integration tests. We can safely run integration tests because
       # we set up the necessary service containers.
@@ -106,8 +99,9 @@ jobs:
           # service containers present.
           DB_INSTANCE_PROVIDER_ADDRESS: provider:58615
 
-  # TODO: Is it possible (and safe) to update the tag from dev->latest without rebuilding?
-  deploy-latest-container:
+  deploy-latest:
+    # Only push on merge to the main branch.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: integration-test
     steps:
