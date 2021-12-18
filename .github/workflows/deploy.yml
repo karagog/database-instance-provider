@@ -13,12 +13,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    # DO NOT SUBMIT
-    - name: Dump input context
-      env:
-        JOB_CONTEXT: ${{ toJSON(input) }}
-      run: echo "$JOB_CONTEXT"
-
     - name: Setup Docker Build
       uses: docker/setup-buildx-action@v1
 
