@@ -28,4 +28,4 @@ jobs:
         context: .
         file: ./containers/mysql/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/mysql-db-provider:${{ inputs.deploy_label }}
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/mysql-db-provider:${{ github.event.inputs.deploy_label }}
