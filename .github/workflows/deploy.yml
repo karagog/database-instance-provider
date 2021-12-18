@@ -1,5 +1,8 @@
 name: Deploy
 on:
+  # DO NOT SUBMIT
+  pull_request:
+    branches: [ master ]
   workflow_dispatch:
     inputs:
       deploy_label:
@@ -12,6 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+
+    - name: Dump input context
+      env:
+        JOB_CONTEXT: ${{ toJSON(github.events.inputs.deploy_label) }}
+      run: echo "$JOB_CONTEXT"
 
     - name: Setup Docker Build
       uses: docker/setup-buildx-action@v1
@@ -28,4 +36,4 @@ jobs:
         context: .
         file: ./containers/mysql/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/mysql-db-provider:${{ inputs.deploy_label }}
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/mysql-db-provider:${{ github.events.inputs.deploy_label }}
