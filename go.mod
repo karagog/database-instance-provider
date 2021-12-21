@@ -8,6 +8,7 @@ require (
 	github.com/go-test/deep v1.0.7
 	github.com/golang/glog v1.0.0
 	github.com/karagog/clock-go v1.0.0
+	github.com/karagog/cloudutil-go v0.0.0-20211219075715-7f6961f6624a
 	google.golang.org/grpc v1.37.0
 	google.golang.org/protobuf v1.27.1
 )

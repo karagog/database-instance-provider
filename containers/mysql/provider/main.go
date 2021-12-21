@@ -7,12 +7,14 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/karagog/clock-go/simulated"
+	"github.com/karagog/cloudutil-go/healthcheck"
 	"github.com/karagog/db-provider/client/go/database/mysql"
 	"github.com/karagog/db-provider/server/lessor"
 	"github.com/karagog/db-provider/server/service"
@@ -43,6 +45,17 @@ func main() {
 	}
 	glog.Infof("Starting service on %s", r.Address())
 	go r.Run()
+
+	// Register the health check, and notify that we're healthy immediately,
+	// because callers will block until the database is ready.
+	mux := http.NewServeMux()
+	healthcheck.Register(mux)
+	healthcheck.SetOK()
+	go func() {
+		if err := http.ListenAndServe(":80", mux); err != nil {
+			glog.Errorf("Error listening on healthcheck port: %s", err)
+		}
+	}()
 
 	p, err := initContainer(context.Background(),
 		getEnvOrDie("MYSQL_ROOT_HOST"),

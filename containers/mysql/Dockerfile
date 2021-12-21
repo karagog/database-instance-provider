@@ -15,23 +15,17 @@ FROM golang:1.17-alpine
 LABEL maintainer George Karagoulis <karagog@gmail.com>
 
 # Copy the source files to the container.
-ARG workdir=/opt/mysql-db-provider
-WORKDIR ${workdir}
-COPY . ./
+WORKDIR /usr/local/src/db-provider
+COPY . .
 
 # Build the binaries into the output directory.
-ARG output_dir=bin
-RUN mkdir ${output_dir}
-
-RUN go build -o ${output_dir} ./containers/mysql/provider ./healthcheck
-
-ENV PATH="${workdir}/${output_dir}:${PATH}"
+RUN go build -o /usr/local/bin ./containers/mysql/provider
 
 # Add the health check so Docker will know when the service is healthy.
 # This polls on a tight interval to minimize the test setup time by marking
 # it healthy as soon as possible.
 HEALTHCHECK --interval=1s --timeout=5s --retries=3 \
-  CMD "healthcheck"
+  CMD RESP="$(wget http://localhost/healthcheck -O /dev/stdout)"; if [ "$RESP" != "OK" ]; then exit 1; fi;
 
 # Run the database provider executable.
-CMD [ "provider" ]
+ENTRYPOINT [ "provider" ]
